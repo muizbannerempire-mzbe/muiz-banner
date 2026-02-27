@@ -26,47 +26,54 @@ export async function handler(event) {
       };
     }
 
-    const response = await fetch("https://toyyibpay.com/index.php/api/createBill", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        userSecretKey: secret,
-        categoryCode: category,
-        billName: note,
-        billDescription: note,
-        billPriceSetting: 1,
-        billPayorInfo: 1,
-        billAmount: amount * 100,
-        billReturnUrl: "https://muiz-banner.netlify.app",
-        billCallbackUrl: "https://muiz-banner.netlify.app",
-        billExternalReferenceNo: "MBE-" + Date.now(),
-        billTo: name,
-        billEmail: "noemail@muizbanner.com",
-        billPhone: phone,
-        billPaymentChannel: 0,
-      }),
-    });
+    const resp = await fetch("https://toyyibpay.com/index.php/api/createBill", {
+  method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  body: new URLSearchParams({
+    userSecretKey: secret,        // dari process.env.TOYYIB_SECRET
+    categoryCode: category,       // dari process.env.TOYYIB_CATEGORY
+    billName: note,
+    billDescription: note,
+    billPriceSetting: 1,
+    billPayorInfo: 1,
+    billAmount: String(Number(amount) * 100),
+    billReturnUrl: "https://muiz-banner.netlify.app",
+    billCallbackUrl: "https://muiz-banner.netlify.app/.netlify/functions/callback",
+    billExternalReferenceNo: "MBE-" + Date.now(),
+    billTo: name,
+    billEmail: "noemail@muizbanner.com",
+    billPhone: phone,
+    billPaymentChannel: 0,
+  }),
+});
 
-    const data = await response.json();
+const text = await resp.text();
 
-    if (!Array.isArray(data) || !data[0]?.BillCode) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "ToyyibPay failed", data }),
-      };
-    }
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        billcode: data[0].BillCode,
-        url: `https://toyyibpay.com/${data[0].BillCode}`,
-      }),
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
-    };
-  }
+// cuba parse JSON kalau boleh
+let data;
+try {
+  data = JSON.parse(text);
+} catch (e) {
+  return {
+    statusCode: 400,
+    body: JSON.stringify({
+      error: "ToyyibPay returned non-JSON",
+      raw: text, // ini akan tunjuk mesej KEY DID NOT...
+    }),
+  };
 }
+
+if (!Array.isArray(data) || !data[0]?.BillCode) {
+  return {
+    statusCode: 400,
+    body: JSON.stringify({ error: "ToyyibPay error", data }),
+  };
+}
+
+return {
+  statusCode: 200,
+  body: JSON.stringify({
+    billcode: data[0].BillCode,
+    url: `https://toyyibpay.com/${data[0].BillCode}`,
+  }),
+};
