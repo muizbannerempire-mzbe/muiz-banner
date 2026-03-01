@@ -1,24 +1,22 @@
-// --- app.js ---
-// Anda boleh gunakan kod ini untuk menggantikan kod sedia ada dalam app.js jika ia belum berfungsi.
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Ambil elemen dari borang
-    const btnBuatBil = document.querySelector('button'); // Pastikan ini butang "Buat Bil" anda
+    // Cari butang yang mempunyai perkataan "ToyyibPay" atau "Buat Bil"
+    const btnBuatBil = Array.from(document.querySelectorAll('button')).find(b => 
+        b.innerText.includes('ToyyibPay') || b.innerText.includes('Buat Bil')
+    );
     
     if(btnBuatBil) {
         btnBuatBil.addEventListener('click', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // Menghalang browser daripada memuat semula halaman
             
-            // Gantikan querySelector ini dengan ID atau Class sebenar input anda di index.html
-            // Contoh di bawah mengandaikan anda ada input dengan nama-nama class ini
+            // Ambil data dari input UI (pastikan placeholder sepadan dengan HTML anda)
             const nama = document.querySelector('input[placeholder*="Nama"]')?.value || 'Pelanggan';
             const telefon = document.querySelector('input[placeholder*="Telefon"]')?.value || '0123456789';
             const produk = document.querySelector('input[placeholder*="Produk"]')?.value || 'Banner';
             const jumlah = document.querySelector('input[placeholder*="Jumlah"]')?.value || '50';
 
-            // Tukar teks butang semasa loading
+            // Tukar teks butang semasa proses 'loading'
             const originalText = btnBuatBil.innerText;
-            btnBuatBil.innerText = "Memproses...";
+            btnBuatBil.innerText = "Memproses Bil...";
             btnBuatBil.disabled = true;
 
             const orderData = {
@@ -29,28 +27,38 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                // Panggil Netlify Function menggunakan URL relatif yang selamat
+                // Panggil Netlify Function
+                // Pastikan anda mempunyai fail create-bill.js di dalam folder netlify/functions
                 const response = await fetch('/.netlify/functions/create-bill', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(orderData)
                 });
 
-                const result = await response.json();
+                const textResult = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(textResult);
+                } catch(err) {
+                    console.error("Ralat Server:", textResult);
+                    alert("Fungsi backend belum sedia. Sila semak log deployment di Netlify.");
+                    btnBuatBil.innerText = originalText;
+                    btnBuatBil.disabled = false;
+                    return;
+                }
 
                 if (response.ok && result.url) {
-                    // Berjaya! Arahkan ke ToyyibPay
+                    // Berjaya! Membawa pelanggan terus ke halaman pembayaran ToyyibPay
                     window.location.href = result.url;
                 } else {
-                    alert(`Ralat: ${result.error || 'Sistem sibuk. Sila cuba lagi.'}`);
+                    alert(`Ralat: ${result.error || 'Gagal mencipta bil.'}`);
                     btnBuatBil.innerText = originalText;
                     btnBuatBil.disabled = false;
                 }
             } catch (error) {
-                console.error("Ralat panggil function:", error);
-                alert("Ralat sistem. Sila pastikan Netlify Functions telah berjaya deploy.");
+                console.error("Ralat panggilan fungsi:", error);
+                alert("Gagal menyambung ke pelayan. Pastikan sambungan internet anda stabil.");
                 btnBuatBil.innerText = originalText;
                 btnBuatBil.disabled = false;
             }
