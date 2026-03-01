@@ -1,7 +1,10 @@
 [build]
+  publish = "."
   functions = "netlify/functions"
 
+# Memastikan Netlify mengarahkan segala ralat URL kembali ke index.html (Penting untuk aplikasi SPA)
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  from = "/*"
+  to = "/index.html"
   status = 200
+```
